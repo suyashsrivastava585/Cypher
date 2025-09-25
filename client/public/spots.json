@@ -1,0 +1,7 @@
+[
+  { "block": "A", "number": 1, "status": "available" },
+  { "block": "A", "number": 2, "status": "occupied" },
+  { "block": "A", "number": 3, "status": "available" },
+  { "block": "B", "number": 1, "status": "reserved" },
+  { "block": "B", "number": 2, "status": "available" }
+]

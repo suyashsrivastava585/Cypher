@@ -1,94 +1,20 @@
-import { useEffect, useState } from "react";
-import { FaArrowRight, FaFireExtinguisher, FaStar } from "react-icons/fa";
-import { MdElevator, MdDoorFront } from "react-icons/md";
+import React from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-export default function FindMyCar() {
-  return (
-    <div className="w-full flex flex-col items-center">
-      {/* Heading */}
-      <h1 className="text-3xl font-bold text-yellow-500 my-4">Find Your Car</h1>
-
-      <div
-        className="relative w-full max-w-[1000px] border-4 border-yellow-600 rounded-xl shadow-lg"
-        style={{ aspectRatio: "1000/1400" }}
-      >
-        {/* Background map */}
-        <div
-          className="absolute inset-0 bg-no-repeat bg-center bg-contain rounded-xl"
-          style={{ backgroundImage: "url('/parking-map.png')" }} // make sure image is in /public
-        ></div>
-
-        {/* Parking blocks */}
-        {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((block) => (
-          <BlockOverlay
-            key={block}
-            block={block}
-            style={blockStyle(block)}
-            cols={blockCols(block)}
-          />
-        ))}
-
-        {/* Features */}
-        <Feature
-          label="Entrance"
-          icon={<MdDoorFront />}
-          style={{ bottom: "40px", left: "50%", transform: "translateX(-50%)" }}
-        />
-        <Feature
-          label="Exit"
-          icon={<FaArrowRight />}
-          style={{ top: "40px", right: "50px" }}
-        />
-
-        {/* Fire extinguishers */}
-        <Feature
-          icon={<FaFireExtinguisher />}
-          style={{ top: "100px", left: "100px" }}
-        />
-        <Feature
-          icon={<FaFireExtinguisher />}
-          style={{ top: "100px", right: "100px" }}
-        />
-        <Feature
-          icon={<FaFireExtinguisher />}
-          style={{ bottom: "100px", left: "120px" }}
-        />
-        <Feature
-          icon={<FaFireExtinguisher />}
-          style={{ bottom: "100px", right: "120px" }}
-        />
-
-        {/* Vertical circulation */}
-        <Feature
-          label="Lift"
-          icon={<MdElevator />}
-          style={{ top: "600px", left: "480px" }}
-        />
-        <Feature
-          label="Stairs"
-          icon={<FaStar />}
-          style={{ top: "600px", left: "540px" }}
-        />
-
-        {/* Service rooms */}
-        <Feature label="Pump Room" style={{ bottom: "300px", left: "100px" }} />
-        <Feature label="Store" style={{ bottom: "500px", right: "150px" }} />
-      </div>
-    </div>
-  );
+interface ParkingSpot {
+  block: string;
+  number: number;
 }
 
-/* ================== Block Overlay ================== */
-function BlockOverlay({
-  block,
-  style,
-  cols,
-}: {
-  block: string;
-  style: React.CSSProperties;
-  cols: number;
-}) {
-  const blockCapacities: Record<string, number> = {
+type ParkingMapProps = {
+  occupied: ParkingSpot[];
+  mySpot?: ParkingSpot | null;
+  className?: string;
+};
+
+// ParkingMap component
+function ParkingMap({ occupied, mySpot, className }: ParkingMapProps) {
+  const blockSizes: Record<string, number> = {
     A: 20,
     B: 24,
     C: 24,
@@ -100,109 +26,120 @@ function BlockOverlay({
     I: 20,
     J: 12,
   };
-  const totalSlots = blockCapacities[block] || 0;
 
-  return (
-    <div
-      className="absolute border-2 border-gray-400 rounded-lg p-2 bg-black/20"
-      style={style}
-    >
-      <h3 className="text-sm font-bold mb-1">Block {block}</h3>
+  const renderBlock = (block: string, columns: number = 8) => {
+    const size = blockSizes[block] ?? 0;
+    return (
       <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+        key={block}
+        className="bg-white/5 p-3 rounded-lg border border-white/10 flex flex-col"
       >
-        {Array.from({ length: totalSlots }, (_, i) => {
-          const number = i + 1;
-          // 👇 Hardcode highlight for A-1
-          const isMySlot = block === "A" && number === 1;
-          return (
-            <ParkingSpotBox
-              key={`${block}-${number}`}
-              block={block}
-              number={number}
-              isMySlot={isMySlot}
-            />
-          );
-        })}
+        <div className="font-semibold mb-2 text-center">Block {block}</div>
+        <div
+          className="grid gap-2 flex-1"
+          style={{
+            gridTemplateColumns: `repeat(${columns}, minmax(0,1fr))`,
+          }}
+        >
+          {Array.from({ length: size }).map((_, idx) => {
+            const slotNumber = idx + 1;
+            const isOccupied = occupied.some(
+              (s) => s.block === block && s.number === slotNumber
+            );
+            return (
+              <div
+                key={idx}
+                className={`flex items-center justify-center text-xs font-medium text-white rounded-md h-8
+                  ${
+                    mySpot &&
+                    mySpot.block === block &&
+                    mySpot.number === slotNumber
+                      ? "bg-blue-500"
+                      : isOccupied
+                      ? "bg-red-500"
+                      : "bg-gray-600"
+                  }`}
+              >
+                {block}-{slotNumber}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
-}
-
-/* ================== Parking Spot ================== */
-function ParkingSpotBox({
-  block,
-  number,
-  isMySlot,
-}: {
-  block: string;
-  number: number;
-  isMySlot: boolean;
-}) {
-  const colorClasses = isMySlot
-    ? "bg-blue-600 border-4 border-yellow-300 text-white animate-bounce shadow-xl shadow-blue-500 scale-110 z-50"
-    : "bg-gray-700 border-gray-600 text-gray-300";
+    );
+  };
 
   return (
     <div
-      className={`h-8 w-8 flex items-center justify-center rounded border text-[10px] font-medium shadow transition-transform ${colorClasses}`}
+      id="map-container"
+      className={`grid grid-cols-[100px_1fr_100px] gap-6 ${className}`}
     >
-      {block}-{number}
+      {/* Left column */}
+      <div className="flex flex-col gap-6">{renderBlock("A", 1)}</div>
+
+      {/* Middle section */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Top row */}
+        {renderBlock("B", 8)}
+        {renderBlock("C", 8)}
+
+        {/* Middle row */}
+        {renderBlock("D", 8)}
+        {renderBlock("E", 8)}
+
+        {/* Bottom row */}
+        {renderBlock("F", 8)}
+        {renderBlock("G", 8)}
+      </div>
+
+      {/* Right column */}
+      <div className="flex flex-col gap-6">{renderBlock("I", 1)}</div>
     </div>
   );
 }
 
-/* ================== Feature Icons ================== */
-function Feature({
-  label,
-  icon,
-  style,
+// Main wrapper
+export default function ParkingSection({
+  occupied,
+  mySpot,
 }: {
-  label?: string;
-  icon?: React.ReactNode;
-  style: React.CSSProperties;
+  occupied: ParkingSpot[];
+  mySpot?: ParkingSpot | null;
 }) {
+  const handleExpand = () => {
+    const el = document.getElementById("map-container");
+    if (el?.requestFullscreen) el.requestFullscreen();
+  };
+
   return (
-    <div
-      className="absolute flex flex-col items-center text-xs text-white bg-black/70 px-2 py-1 rounded-md border border-gray-500 shadow-lg"
-      style={style}
-    >
-      {icon && <div className="mb-1">{icon}</div>}
-      {label}
-    </div>
+    <section className="mb-6 md:mb-10">
+      <Card className="bg-gradient-card border-border shadow-card p-4">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse border-white"></span>
+            Live Parking Map
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden rounded-lg border border-border relative">
+            <div className="absolute inset-0 overflow-auto touch-pan-y touch-pan-x p-4">
+              <div className="min-w-[700px] md:min-w-full min-h-[300px]">
+                <ParkingMap occupied={occupied} mySpot={mySpot} />
+              </div>
+            </div>
+          </div>
+
+          {/* Expand Map Button */}
+          <div className="flex justify-end mt-2 md:hidden">
+            <button
+              onClick={handleExpand}
+              className="px-3 py-1 text-xs rounded bg-primary text-white shadow"
+            >
+              Expand Map
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
-
-/* ================== Helpers ================== */
-const blockStyle = (block: string): React.CSSProperties => {
-  const positions: Record<string, React.CSSProperties> = {
-    A: { top: "150px", left: "40px", width: "100px", height: "800px" },
-    B: { top: "150px", left: "180px", width: "300px", height: "200px" },
-    C: { top: "150px", left: "520px", width: "300px", height: "200px" },
-    D: { top: "400px", left: "180px", width: "300px", height: "220px" },
-    E: { top: "400px", left: "520px", width: "300px", height: "220px" },
-    F: { top: "650px", left: "180px", width: "300px", height: "220px" },
-    G: { top: "650px", left: "520px", width: "300px", height: "220px" },
-    H: { bottom: "100px", left: "200px", width: "600px", height: "120px" },
-    I: { top: "150px", right: "40px", width: "100px", height: "800px" },
-    J: { bottom: "250px", right: "50px", width: "160px", height: "140px" },
-  };
-  return positions[block];
-};
-
-const blockCols = (block: string): number => {
-  const cols: Record<string, number> = {
-    A: 1,
-    B: 8,
-    C: 8,
-    D: 8,
-    E: 8,
-    F: 8,
-    G: 8,
-    H: 9,
-    I: 1,
-    J: 4,
-  };
-  return cols[block] || 1;
-};

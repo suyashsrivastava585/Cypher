@@ -73,7 +73,7 @@ export default function PaymentPortal({ orderId = "" }: Props) {
     setProcessing(true);
     setMessage("Redirecting to allocate page...");
     setTimeout(() => {
-      window.location.href = "http://localhost:8080/allocateslot";
+      window.location.href = "https://intermalar-kaylen-corticate.ngrok-free.dev/allocateslot";
     }, 500);
   }
 

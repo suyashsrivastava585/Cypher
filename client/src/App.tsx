@@ -29,7 +29,7 @@ const App = () => (
             <Route path="/EntryPage" element={<EntryPage />} />
             <Route path="/AllocateSlot" element={<AllocateSlot />} />
             <Route path="/PaymentPortal" element={<PaymentPortal />} />
-            <Route path="/FindMyCar" element={<FindMyCar />} />
+            <Route path="/FindMyCar" element={<FindMyCar occupied={[]} />} />
             <Route path="/ThankYou" element={<ThankYou />} />
             {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />

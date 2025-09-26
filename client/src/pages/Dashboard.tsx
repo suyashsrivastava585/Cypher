@@ -29,7 +29,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchOccupied() {
       try {
-        const res = await fetch("http://localhost:3000/occupied");
+        const res = await fetch("https://cypher-3bft.onrender.com/occupied");
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data: ParkingSpot[] = await res.json();
         setOccupied(data);
@@ -47,7 +47,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchMySlot() {
       try {
-        const res = await fetch("http://localhost:3000/allocate");
+        const res = await fetch("https://cypher-3bft.onrender.com/allocate");
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data: ParkingSpot = await res.json();
         setMySpot(data);
@@ -105,23 +105,54 @@ export default function Dashboard() {
   </div>
 </header>
 
+
       {/* Parking Map Section */}
-      <section className="mb-6 md:mb-10">
-        <Card className="bg-gradient-card border-border shadow-card p-4 overflow-auto">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse border-white"></span>
-              Live Parking Map{" "}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-auto">
-            <div className="w-full max-w-[1000px] md:max-w-full">
-              {/* Pass occupied slots info to ParkingMap */}
-              <ParkingMap occupied={occupied} mySpot={mySpot} />
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+<section className="mb-6 md:mb-10">
+  <Card className="bg-gradient-card border-border shadow-card p-4">
+    <CardHeader>
+      <CardTitle className="text-xl flex items-center gap-2">
+        <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse border-white"></span>
+        Live Parking Map
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      {/* Mobile-first container */}
+      <div
+        id="map-container" // ✅ Added ID here
+        className="w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden rounded-lg border border-border relative"
+      >
+        <div className="absolute inset-0 overflow-auto touch-pan-y touch-pan-x">
+          <div className="min-w-[600px] md:min-w-full min-h-[300px]">
+            <ParkingMap occupied={occupied} mySpot={mySpot} />
+          </div>
+        </div>
+      </div>
+
+      {/* Fullscreen button */}
+      <div className="flex justify-end mt-2 md:hidden">
+        <button
+          onClick={() => {
+            const el = document.getElementById("map-container");
+            if (el?.requestFullscreen) {
+              el.requestFullscreen();
+            } else if ((el as any)?.webkitRequestFullscreen) {
+              (el as any).webkitRequestFullscreen(); // Safari
+            } else if ((el as any)?.msRequestFullscreen) {
+              (el as any).msRequestFullscreen(); // IE11
+            }
+          }}
+          className="px-3 py-1 text-xs rounded bg-primary text-white shadow"
+        >
+          Expand Map
+        </button>
+      </div>
+    </CardContent>
+  </Card>
+</section>
+
+
+
+
 
       {/* Stats Overview */}
       <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-10">

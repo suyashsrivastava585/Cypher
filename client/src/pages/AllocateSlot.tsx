@@ -13,7 +13,7 @@ export default function AllocateSlot({ onComplete }: AllocateSlotProps) {
   useEffect(() => {
     async function fetchAllocatedSlot() {
       try {
-        const response = await fetch(`http://localhost:3000/allocate?userId=currentUserId`);
+        const response = await fetch(`https://cypher-3bft.onrender.com/allocate?userId=currentUserId`);
         const data = await response.json();
         setMySlot(data); // expects { block: "B", number: 5, status: "reserved" }
       } catch (err) {
@@ -31,7 +31,7 @@ export default function AllocateSlot({ onComplete }: AllocateSlotProps) {
   useEffect(() => {
   if (mySlot) {
     const navTimeout = setTimeout(() => {
-      window.location.href = "http://localhost:8080/dashboard";
+      window.location.href = "https://intermalar-kaylen-corticate.ngrok-free.dev/dashboard";
     }, 3000); // 3 seconds
     return () => clearTimeout(navTimeout);
   }

@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
-import { ParkingSpot } from "@/context/ParkingContext";
+import { useSlot } from "@/context/SlotContext";
 
 interface AllocateSlotProps {
   onComplete?: () => void; // callback to show Parking Map after allocation
 }
 
 export default function AllocateSlot({ onComplete }: AllocateSlotProps) {
-  const [mySlot, setMySlot] = useState<ParkingSpot | null>(null);
+  const { mySlot, setMySlot } = useSlot();
   const [loading, setLoading] = useState(true);
 
   // Fetch allocated slot from backend
   useEffect(() => {
     async function fetchAllocatedSlot() {
       try {
-        const response = await fetch(`https://cypher-3bft.onrender.com/allocate?userId=currentUserId`);
+        const response = await fetch(
+          `http://localhost:3000/allocate?userId=currentUserId`
+        );
         const data = await response.json();
-        setMySlot(data); // expects { block: "B", number: 5, status: "reserved" }
+        setMySlot(data); // ✅ stored globally + localStorage
       } catch (err) {
         console.error("Slot allocation failed:", err);
         setMySlot(null);
@@ -24,18 +26,24 @@ export default function AllocateSlot({ onComplete }: AllocateSlotProps) {
       }
     }
 
-    fetchAllocatedSlot();
+    // Only fetch if user has no slot yet
+    if (!mySlot) {
+      fetchAllocatedSlot();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   // Automatically call onComplete (to show Parking Map) after 3 seconds
   useEffect(() => {
-  if (mySlot) {
-    const navTimeout = setTimeout(() => {
-      window.location.href = "https://intermalar-kaylen-corticate.ngrok-free.dev/dashboard";
-    }, 3000); // 3 seconds
-    return () => clearTimeout(navTimeout);
-  }
-}, [mySlot]);
+    if (mySlot) {
+      const navTimeout = setTimeout(() => {
+        window.location.href =
+          "/dashboard";
+      }, 3000); // 3 seconds
+      return () => clearTimeout(navTimeout);
+    }
+  }, [mySlot]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useParking } from "@/context/ParkingContext";
 import ParkingMap from "../components/ParkingMap";
+import { useSlot } from "@/context/SlotContext";
 
 interface ParkingSpot {
   block: string;
@@ -23,13 +24,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { spots } = useParking();
   const [occupied, setOccupied] = useState<ParkingSpot[]>([]);
-  const [mySpot, setMySpot] = useState<ParkingSpot | null>(null);
+  const {mySlot, clearSlot} = useSlot();
 
   // Fetch occupied slots
   useEffect(() => {
     async function fetchOccupied() {
       try {
-        const res = await fetch("https://cypher-3bft.onrender.com/occupied");
+        const res = await fetch("http://localhost:3000/occupied");
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data: ParkingSpot[] = await res.json();
         setOccupied(data);
@@ -42,33 +43,52 @@ export default function Dashboard() {
     const interval = setInterval(fetchOccupied, 5000); // refresh every 5s
     return () => clearInterval(interval);
   }, []);
-
-  // Fetch my allocated slot (will call GET /allocate)
   useEffect(() => {
-    async function fetchMySlot() {
-      try {
-        const res = await fetch("https://cypher-3bft.onrender.com/allocate");
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data: ParkingSpot = await res.json();
-        setMySpot(data);
-      } catch (err) {
-        console.error("Failed to fetch my slot:", err);
+  if (!mySlot) return;
+
+  async function validateMySlot() {
+    try {
+      const res = await fetch("http://localhost:3000/occupied");
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const data: ParkingSpot[] = await res.json();
+
+      // Check if my slot is still occupied
+      const stillOccupied = data.some(
+        (s) => s.block === mySlot.block && s.number === mySlot.number
+      );
+
+      if (!stillOccupied) {
+        clearSlot(); // auto-clear if backend says it's free
       }
+    } catch (err) {
+      console.error("Failed to validate mySlot:", err);
     }
+  }
 
-    fetchMySlot();
-  }, []);
+  validateMySlot(); // run once immediately
+  const interval = setInterval(validateMySlot, 5000); // run every 5s
 
-  // compute summary counts without comparing to a non-existent 'unavailable' string type
-  const availableCount = spots.filter((s) => s.status === "available").length;
-  const occupiedCount = spots.filter((s) => s.status === "occupied").length;
-  const unavailableCount = spots.length - availableCount - occupiedCount;
+  return () => clearInterval(interval);
+}, [mySlot, clearSlot]);
 
-  const summary = {
-    available: availableCount,
-    occupied: occupiedCount,
-    unavailable: unavailableCount,
-  };
+
+
+
+  // compute summary counts dynamically from occupied + total spots
+const totalSpots = spots.length;
+
+// Treat "unavailable" as total - (available + occupied)
+const occupiedCount = occupied.length;
+const availableCount = totalSpots - occupiedCount; 
+const unavailableCount =
+  totalSpots - (availableCount + occupiedCount); // fallback if some slots are reserved/unavailable
+
+const summary = {
+  available: availableCount,
+  occupied: occupiedCount,
+  unavailable: unavailableCount,
+};
+
 
   const notifications = [
     { type: "alert", message: "Block D is nearly full" },
@@ -123,7 +143,7 @@ export default function Dashboard() {
       >
         <div className="absolute inset-0 overflow-auto touch-pan-y touch-pan-x">
           <div className="min-w-[600px] md:min-w-full min-h-[300px]">
-            <ParkingMap occupied={occupied} mySpot={mySpot} />
+            <ParkingMap occupied={occupied} mySpot={mySlot} />
           </div>
         </div>
       </div>
@@ -214,44 +234,47 @@ export default function Dashboard() {
       </section>
 
       {/* Availability Summary */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6">
-        <Card className="bg-gradient-card border-border shadow-card">
-          <CardHeader>
-            <CardTitle className="text-gray-500">Available</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary.available} spots
-            <Progress
-              value={(summary.available / spots.length) * 100}
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-card border-border shadow-card">
-          <CardHeader>
-            <CardTitle className="text-red-500">Occupied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary.occupied} spots
-            <Progress
-              value={(summary.occupied / spots.length) * 100}
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-card border-border shadow-card">
-          <CardHeader>
-            <CardTitle className="text-gray-500">Unavailable</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary.unavailable} spots
-            <Progress
-              value={(summary.unavailable / spots.length) * 100}
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
-      </section>
+<section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+  <Card className="bg-gradient-card border-border shadow-card">
+    <CardHeader>
+      <CardTitle className="text-green-500">Available</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {summary.available} spots
+      <Progress
+        value={(summary.available / totalSpots) * 100}
+        className="mt-2"
+      />
+    </CardContent>
+  </Card>
+
+  <Card className="bg-gradient-card border-border shadow-card">
+    <CardHeader>
+      <CardTitle className="text-red-500">Occupied</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {summary.occupied} spots
+      <Progress
+        value={(summary.occupied / totalSpots) * 100}
+        className="mt-2"
+      />
+    </CardContent>
+  </Card>
+
+  <Card className="bg-gradient-card border-border shadow-card">
+    <CardHeader>
+      <CardTitle className="text-gray-500">Unavailable</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {summary.unavailable} spots
+      <Progress
+        value={(summary.unavailable / totalSpots) * 100}
+        className="mt-2"
+      />
+    </CardContent>
+  </Card>
+</section>
+
 
       {/* User Parking Status + Notifications + System Health */}
       <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6">
@@ -261,9 +284,9 @@ export default function Dashboard() {
             <CardTitle>Your Car</CardTitle>
           </CardHeader>
           <CardContent>
-            {mySpot ? (
+            {mySlot ? (
               <>
-                Parked at <strong>Block {mySpot.block}-{mySpot.number}</strong>{" "}
+                Parked at <strong>Block {mySlot.block}-{mySlot.number}</strong>{" "}
                 <br />
               </>
             ) : (

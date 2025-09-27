@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useSlot } from "@/context/SlotContext";
 
 interface ParkingSpot {
   block: string;
@@ -8,12 +9,13 @@ interface ParkingSpot {
 
 type ParkingMapProps = {
   occupied: ParkingSpot[];
-  mySpot?: ParkingSpot | null;
   className?: string;
 };
 
 // ParkingMap component
-function ParkingMap({ occupied, mySpot, className }: ParkingMapProps) {
+function ParkingMap({ occupied, className }: ParkingMapProps) {
+  const { mySlot } = useSlot(); // 👈 get current slot from context
+
   const blockSizes: Record<string, number> = {
     A: 20,
     B: 24,
@@ -46,14 +48,18 @@ function ParkingMap({ occupied, mySpot, className }: ParkingMapProps) {
             const isOccupied = occupied.some(
               (s) => s.block === block && s.number === slotNumber
             );
+
+            const isMySpot =
+              mySlot &&
+              mySlot.block === block &&
+              mySlot.number === slotNumber; // 👈 from context
+
             return (
               <div
                 key={idx}
                 className={`flex items-center justify-center text-xs font-medium text-white rounded-md h-8
                   ${
-                    mySpot &&
-                    mySpot.block === block &&
-                    mySpot.number === slotNumber
+                    isMySpot
                       ? "bg-blue-500"
                       : isOccupied
                       ? "bg-red-500"
@@ -79,17 +85,14 @@ function ParkingMap({ occupied, mySpot, className }: ParkingMapProps) {
 
       {/* Middle section */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Top row */}
         {renderBlock("B", 8)}
         {renderBlock("C", 8)}
-
-        {/* Middle row */}
         {renderBlock("D", 8)}
         {renderBlock("E", 8)}
-
-        {/* Bottom row */}
         {renderBlock("F", 8)}
         {renderBlock("G", 8)}
+        {renderBlock("H", 6)} {/* Added H */}
+        {renderBlock("J", 4)} {/* Added J */}
       </div>
 
       {/* Right column */}
@@ -99,13 +102,7 @@ function ParkingMap({ occupied, mySpot, className }: ParkingMapProps) {
 }
 
 // Main wrapper
-export default function ParkingSection({
-  occupied,
-  mySpot,
-}: {
-  occupied: ParkingSpot[];
-  mySpot?: ParkingSpot | null;
-}) {
+export default function ParkingSection({ occupied }: { occupied: ParkingSpot[] }) {
   const handleExpand = () => {
     const el = document.getElementById("map-container");
     if (el?.requestFullscreen) el.requestFullscreen();
@@ -124,7 +121,7 @@ export default function ParkingSection({
           <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden rounded-lg border border-border relative">
             <div className="absolute inset-0 overflow-auto touch-pan-y touch-pan-x p-4">
               <div className="min-w-[700px] md:min-w-full min-h-[300px]">
-                <ParkingMap occupied={occupied} mySpot={mySpot} />
+                <ParkingMap occupied={occupied} />
               </div>
             </div>
           </div>

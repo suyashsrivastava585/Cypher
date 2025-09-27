@@ -1,30 +1,56 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useSlot } from "@/context/SlotContext";
 
 type Props = {
   vehicleNumber?: string;
 };
 
-interface ParkingData {
-  entryTime: string;
-  exitTime: string;
-}
+type Slot = { block: string; number: number } | null;
 
 export default function ThankYou({ vehicleNumber = "—" }: Props) {
-  const [data, setData] = useState<ParkingData | null>(null);
+  const { mySlot, clearSlot } = useSlot();
+  const [releasedSlot, setReleasedSlot] = useState<Slot>(null); // <- new
   const [duration, setDuration] = useState<string>("—");
+  const [loading, setLoading] = useState(true);
+  const didReleaseRef = useRef(false); // <- guard for double-run
 
   useEffect(() => {
-  // ✅ Hardcoded values instead of backend fetch
-  const entryTime = new Date().toISOString(); // just now
-  const exitTime = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(); // +2 hours
+    async function releaseSlot() {
+      if (!mySlot) {
+        setLoading(false);
+        return;
+      }
 
-  const hours = 2;
-  const minutes = 0;
-  const formatted = `${hours}h ${minutes}m`; // ✅ fixed with backticks
+      if (didReleaseRef.current) return; // already released once
+      didReleaseRef.current = true;
 
-  setData({ entryTime, exitTime });
-  setDuration(formatted);
-}, []);
+      // capture slot info locally before clearing it
+      setReleasedSlot(mySlot);
+
+      try {
+        const response = await fetch("http://localhost:3000/release", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ block: mySlot.block, number: mySlot.number }),
+        });
+
+        if (!response.ok) throw new Error("Failed to release slot");
+
+        const data = await response.json(); // { duration: "01:23" }
+        setDuration(data.duration);
+
+        // safe to clear context now that we have a local copy
+        clearSlot();
+      } catch (err) {
+        console.error("Release failed:", err);
+        setDuration("—");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    releaseSlot();
+  }, [mySlot, clearSlot]);
 
   return (
     <div
@@ -47,11 +73,7 @@ export default function ThankYou({ vehicleNumber = "—" }: Props) {
             strokeWidth="3"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 13l4 4L19 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
@@ -67,18 +89,20 @@ export default function ThankYou({ vehicleNumber = "—" }: Props) {
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 mb-6 shadow-inner text-left border border-white/20">
           <div className="flex justify-between mb-2 text-slate-200">
             <span>Parking Duration</span>
-            <span className="font-medium text-white">{duration}</span>
+            <span className="font-medium text-white">
+              {loading ? "Calculating..." : duration}
+            </span>
           </div>
           <div className="flex justify-between mb-2 text-slate-200">
             <span>Amount Paid</span>
             <span className="font-medium text-white">₹10.00</span>
           </div>
+
+          {/* Replaced Exit Time with Block Parked (uses releasedSlot) */}
           <div className="flex justify-between text-slate-200">
-            <span>Exit Time</span>
+            <span>Block Parked</span>
             <span className="font-medium text-white">
-              {data?.exitTime
-                ? new Date(data.exitTime).toLocaleTimeString()
-                : "—"}
+              {releasedSlot ? `${releasedSlot.block}${releasedSlot.number}` : "—"}
             </span>
           </div>
         </div>
